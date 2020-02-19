@@ -12,7 +12,6 @@ get_aux_mets <- function(data_cor ,  Met , ccm) {
     #print(Met)
     cor_x = data_cor[which(colnames(data_cor) == Met) ,]
     cor_x <- abs(cor_x[names(cor_x) %in% ( ccm )])
-    #print(cor_x)
     Preds = c(na.omit(sort(cor_x , decreasing = T)[1:10]))
     return(Preds)
 }
@@ -50,9 +49,8 @@ useknn2 <- function(X , dataframe , data_cor, ccm  ) {
 #long to adjust the number of variables in the output of this function (TRUE only if the loop iteration is n>1)
 #optional argumnets are the O for the outcome, co_vars for the covariants that will be needed for the analysis model(s),
 #m is the number of imputations to be done, use_co_vars is true only if you want to use these variables as predcitors for the imputation
-usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_co_vars = FALSE ) {
+usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_co_vars = FALSE ,logScale = TRUE ) {
     #step 1 creating a subset for X and the predictor variables to be used to calculate the imputation values
-    
     Preds = get_aux_mets(data_cor , X ,ccm  )
     mean_qual = mean(Preds , na.rm = T)
     if (use_co_vars == TRUE){
@@ -60,7 +58,6 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
     else {cluster = c(O , names(Preds) , X )
          co_vars = NULL}
     minidf <- dataframe[cluster]
-    
     #the mean of the correlations is added to QualSummary
     QualSummary <<- rbind(QualSummary , data.frame('Metabolite' = X , 'Mean_Quality' = mean_qual))
 
@@ -71,15 +68,17 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
     where_matrix[, Dont_Impute] = FALSE
     
     #The actual imputation step using the mice package
-    IMP <- mice(minidf ,printFlag = TRUE , m= m , where = where_matrix )
-    
+    IMP <- mice(minidf ,printFlag = FALSE , m= m , where = where_matrix )
+
     #Long is set to FALSE if this the first variable in the loop, in this case only we select the .imp (imputation number), .id (the original row number), the outcome, the covars (only if use_co_vars is TRUE), X1.
     #For the remaining iterations in the loop we do not need these columns again so we only extract Xn
 
     if (long) {output <- complete(IMP ,  action = 'long' , include = TRUE)[X]}
     
     else {output <- complete(IMP ,  action = 'long' , include = TRUE)[c('.imp','.id', O , co_vars , X )]
-         output[X] <- exp(as.data.frame(do.call(cbind , lapply(X , FUN =  unscale, d = output))))
+         if (logScale) { 
+             output[X] <- exp(as.data.frame(do.call(cbind , lapply(X , FUN =  unscale, d = output)))) }
+
          #output[X] <- exp(output[X])
          }
     return(output)
@@ -97,14 +96,16 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
 #fileoutname: name of the output name for the knn or mice imputation as an csv sheet
 
 Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 = NULL , outcome=NULL,
-                 covars=NULL, fileoutname = NULL , use_covars = FALSE) {
+                 covars=NULL, fileoutname = NULL , use_covars = FALSE , logScale = TRUE) {
     
     require(mice)
     require(dplyr)
     #ptm <- proc.time()
+    if (logScale) {
     #Step 1 log: normal dist, outliers effect reduced
     assign(x = 'scale_info' ,value = do.call(rbind , lapply(group1 , FUN =getscaleval, dat = log( DataFrame[group1] ) )),
                         envir =.GlobalEnv)
+        }
     #QualSummary will be used to store the mean correlation of each metabolite with missing values
     assign(x = 'QualSummary' ,value = data.frame() ,
                         envir =.GlobalEnv)
@@ -127,7 +128,6 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
 
     #Step3: create a correlation matrix
     data_cor = cor(DataFrame[c(ccm, icm_names)] , use="p")
-    
     #Step4: check if there is actually missing values
     if (length(icm) == 0) {return('There are no missing data in the group 1 metabolites')}
 
@@ -152,7 +152,8 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
         #This calls the useknn2 function above. output is un-scaled and exponentialized and returned as object. 
         #can also be saved to a csv file if fileoutname is provided
         output = do.call(cbind, lapply(icm_names, FUN = useknn2, dataframe = DataFrame , data_cor = data_cor, ccm = ccm))
-        output <- exp(as.data.frame(do.call(cbind,lapply(colnames(output),FUN =  unscale, d = output)))) 
+        if (logScale) {
+            output <- exp(as.data.frame(do.call(cbind,lapply(colnames(output),FUN =  unscale, d = output)))) }
         #the imputed variables replace their orginals in the main dataframe 
         DataFrame[colnames(output)] <- output
         
@@ -173,7 +174,8 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
                               co_vars = covars,
                               long = FALSE ,
                               use_co_vars = use_covars,
-                              m= number_m
+                              m= number_m,
+                              logScale = logScale
                              )
 
         #if , for whatever reason, there is only one metabolite with missingness, the next step will not be run
@@ -189,18 +191,21 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
                                             co_vars = covars,
                                             long = TRUE ,
                                             use_co_vars = use_covars,
-                                            m=number_m)))
-            
+                                            m=number_m,
+                                            logScale = logScale)))
+            if (logScale) {
             allmids <- cbind(firstmids , exp(as.data.frame(do.call(cbind,lapply(colnames(allmids),
                                                                                 FUN =  unscale, d = allmids)))) )
-            #else {allmids  <- cbind(firstmids , exp(allmids))}
-            }
-            #}
+                } else {allmids <- cbind(firstmids , allmids) }
+        }    
         #only used if there is one variable with missing values
         else{allmids <- firstmids}
 
         #output is un-scaled and exponentialized and returned as object
-        DataFrame[ccm] <-  exp(as.data.frame(do.call(cbind , lapply(ccm ,FUN =  unscale, d = DataFrame[ccm]))) )
+        if (logScale) {
+            DataFrame[ccm] <-  exp(as.data.frame(do.call(cbind , lapply(ccm ,FUN =  unscale, d = DataFrame[ccm]))) )
+            } 
+            
         
         #the other variables from ccm and group2 must be merged with the multiple imputation data generated 
         #duplicate the rows of other metabolies number_m times then bind them to the allmids data frame
