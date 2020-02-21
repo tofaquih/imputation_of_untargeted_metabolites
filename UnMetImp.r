@@ -143,7 +143,9 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
     }
     
     #Step 7: scale and log the ccm and icm metabolites ONLY
-    DataFrame[c(ccm , icm_names)] <- scale(log( DataFrame[c(ccm , icm_names)] ))
+    if (logScale) {
+    	DataFrame[c(ccm , icm_names)] <- scale(log( DataFrame[c(ccm , icm_names)] )) }
+
     #Summary of the imputation used for which variables 
     msummary <- list('Imputed' = icm_names, 'Bad Case' = invalids, 'Zero' = group2_summary )
     
