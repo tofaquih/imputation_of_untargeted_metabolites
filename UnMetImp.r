@@ -184,7 +184,7 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
         #Otherwise the remaining variables will be imputed then merged with the togther and with the first variable
         if (length(icm_names) > 1) {
             #print('step 2')
-            allmids <- as.data.frame(do.call(cbind , lapply(
+            allmids <- as.data.frame(do.call(cbind , mclapply(mc.silent = TRUE,
                                             icm_names[2:length(icm_names)] , FUN = usemice2 ,
                                             dataframe = DataFrame ,
                                             data_cor = data_cor,
