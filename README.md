@@ -7,7 +7,10 @@ This script is designed to impute missing values in Metabolon HD4 datasets using
   2. Variables in group 2 will be imputed with zero values
   3. A Pearson’s correlation matrix is created using all the group 1 variables
   4. Group 1 variables will be split into completed cases (no missing values), incomplete cases, and invalid cases where the number of missing is too high. These variables are named ccm, icm/icm_names, and invalids respectively. 
-  The cutoff for this is set at 90% missingness OR if the number of non-missing values in less than the number of predictor variables + 20. This is done to because of two reasons: 1- to eliminate possibly mis-annotated metabolites or unannotated metabolites that are xenobiotic in nature, 2- To ensure the availability of enough cases to perform the imputation. This issue prevents the MICE package from performing the imputation all together. This can be manually altered by changing the miss90 and maxpreds variables.
+  The cutoff for this is set at 90% missingness OR if the number of non-missing values in less than the number of predictor variables + 20. This is done to because of two reasons:
+  - to eliminate possibly mis-annotated metabolites or unannotated metabolites that are xenobiotic in nature, 
+  - To ensure the availability of enough cases to perform the imputation. 
+  This issue prevents the MICE package from performing the imputation all together. This can be manually altered by changing the miss90 and maxpreds variables.
   The invalid cases will be imputed to zero.
   5. The group 1 variables will be log transformed and scaled and centered on their mean. This information will be stored in separate variable to un-scale the values later.
   6. The imputation function will loop through the icm variables one by one.
