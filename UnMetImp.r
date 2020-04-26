@@ -9,7 +9,6 @@
 
 #Function that selects the 10 strongest correlated metabolites
 get_aux_mets <- function(data_cor ,  Met , ccm) {
-    #print(Met)
     cor_x = data_cor[which(colnames(data_cor) == Met) ,]
     cor_x <- abs(cor_x[names(cor_x) %in% ( ccm )])
     Preds = c(na.omit(sort(cor_x , decreasing = T)[1:10]))
@@ -18,12 +17,13 @@ get_aux_mets <- function(data_cor ,  Met , ccm) {
 
 #a function that scales the data (z-transform) and stores the values for reversing the scaling
 getscaleval <- function(x, dat) {
-    y <- scale(dat[x], center = T, scale = T) 
+    y <- scale(dat[x], center = TRUE, scale = TRUE) 
     return(data.frame('scale' = attr(y , 'scaled:scale') , 'center' = attr(y , 'scaled:center') ))
 }
 #function that unsclaes the values using the orginal mean
 unscale <- function (x, d) {
     #d = dataframe, x = variable name 
+    
     d[x] * scale_info[x,'scale'] + scale_info[x,'center']
 }
 #function for knn imputatiion, requires the metabolite with missing valuesm the main data, the correlation matrix, the names of metabolites with no missing values
@@ -42,7 +42,6 @@ useknn2 <- function(X , dataframe , data_cor, ccm  ) {
                                dist_var = cluster[1:length(cluster)-1] ,
                                numFun = mean ,
                                k=10))[X]
-    #print(head(output[X]))
     return(output[X])
     }
 #function that runs the mice imputation, requires X, the main data, the correlation matrix, the metabolites with no missing values
@@ -79,7 +78,6 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
          if (logScale) { 
              output[X] <- exp(as.data.frame(do.call(cbind , lapply(X , FUN =  unscale, d = output)))) }
 
-         #output[X] <- exp(output[X])
          }
     return(output)
 }
@@ -97,7 +95,6 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
 
 Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 = NULL , outcome=NULL,
                  covars=NULL, fileoutname = NULL , use_covars = FALSE , logScale = TRUE) {
-    
     require(mice)
     require(dplyr)
     #ptm <- proc.time()
@@ -109,7 +106,6 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
     #QualSummary will be used to store the mean correlation of each metabolite with missing values
     assign(x = 'QualSummary' ,value = data.frame() ,
                         envir =.GlobalEnv)
-    
     
     #Step2: calculate number of missing values in each metabolites, split them into complete ccm and incomplete icm
     l =lapply(DataFrame[group1] , function (x) {sum(is.na(x))})
@@ -123,9 +119,6 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
     icm_names <- names(icm)
     invalids <- names(l)[l >= cutoff ]
     
-    
-    #icm_names <- icm_names[!(invalids %in% icm_names) ]
-
     #Step3: create a correlation matrix
     data_cor = cor(DataFrame[c(ccm, icm_names)] , use="p")
     #Step4: check if there is actually missing values
@@ -183,9 +176,7 @@ Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 
         #if , for whatever reason, there is only one metabolite with missingness, the next step will not be run
         #Otherwise the remaining variables will be imputed then merged with the togther and with the first variable
         if (length(icm_names) > 1) {
-            #print('step 2')
-            allmids <- as.data.frame(do.call(cbind , mclapply(mc.silent = TRUE,
-                                            icm_names[2:length(icm_names)] , FUN = usemice2 ,
+            allmids <- as.data.frame(do.call(cbind , lapply(icm_names[2:length(icm_names)] , FUN = usemice2 ,
                                             dataframe = DataFrame ,
                                             data_cor = data_cor,
                                             ccm = ccm ,
