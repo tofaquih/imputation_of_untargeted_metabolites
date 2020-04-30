@@ -1,0 +1,5 @@
+R version 3.6.3 (2020-02-29)
+mice_3.8.0
+docstring_1.0.0
+VIM_5.1.1
+dplyr_0.8.5
