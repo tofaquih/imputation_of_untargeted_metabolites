@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/235815834.svg)](https://zenodo.org/badge/latestdoi/235815834)
+
 # Introduction
 A script design to impute missing values in Metabolon metabolomics datasets. Two imputation methods can be used: MICE and KNN
 This script is designed to impute missing values in Metabolon HD4 datasets using KNN and MICE imputations. It is technically possible to use it with any metabolomic dataset.
