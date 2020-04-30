@@ -1,11 +1,11 @@
-#########################
-#This script is designed to impute missing values in Metabolon HD4 datasets. However, it is technically possible to use it with any dataset.
-#The script works as follows: 1- The variables in group are supplied by the user. These variables will be imputed using MICE or KNN
-#2- Variables in group 2 will be imputed with zero values
-#3- A pearon's correlation matrix is created using all the group 1 variables
-#4a- group 1 variables will be split into completed cases (no missing values), incomplete cases, and invalid cases where the number of missing is too high. 
-#4b- The cutoff for this is set at 90% missingness OR if the number of non missing values in less than the number of predictor variables + 20. This is done to because of two reasons: 1- to elimnate possibly mis-annotated metabolites or unannotated metabolites that are xenobiotic in nature, 2- to ensure the avaliability of 
-#5- 
+##################################################
+## Project: A workflow for missing values imputation of untargeted metabolomics data 
+## Script purpose: Imputes missing values in metabolite data using MICE-pmm or kNN-obs-sel
+## Date: 20200430
+## Author:Tariq faquih
+##################################################
+
+
 
 #Function that selects the 10 strongest correlated metabolites
 get_aux_mets <- function(data_cor ,  Met , ccm) {
@@ -92,8 +92,8 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
 #covars: variables that will be used in the later analysis after the mice imputation
 #use_covars: set to TRUE if the co variables should be used for the imputation (not required for mice, IMPORTANT: will NOT work if the co vars have any missing values)
 #fileoutname: name of the output name for the knn or mice imputation as an csv sheet
-
-Main <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 = NULL , outcome=NULL,
+#logScale:
+UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 = NULL , outcome=NULL,
                  covars=NULL, fileoutname = NULL , use_covars = FALSE , logScale = TRUE) {
     require(mice)
     require(dplyr)
