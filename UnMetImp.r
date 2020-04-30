@@ -5,31 +5,70 @@
 ## Author:Tariq faquih
 ##################################################
 
+library(docstring)
 
 
-#Function that selects the 10 strongest correlated metabolites
 get_aux_mets <- function(data_cor ,  Met , ccm) {
+    #' Function that selects the 10 strongest correlated metabolites
+    #' 
+    #' @param data_cor the data correlation matrix for the metabolites
+    #' @param Met name of the metabolite column with missing value
+    #' @param ccm vector with the column names of the complete cases
+    #' 
     cor_x = data_cor[which(colnames(data_cor) == Met) ,]
     cor_x <- abs(cor_x[names(cor_x) %in% ( ccm )])
     Preds = c(na.omit(sort(cor_x , decreasing = T)[1:10]))
     return(Preds)
 }
 
-#a function that scales the data (z-transform) and stores the values for reversing the scaling
+
 getscaleval <- function(x, dat) {
+    #' Scales values and stores the mean and sd
+    #' 
+    #' @description  a function that scales the data (z-transform) and stores the values for reversing the scaling
+    #' 
+    #' 
+    #' @param x the metabolite column name
+    #' @param dat the main dataframe of x
+    #' 
+    #' @return dataframe with the scale and center attributes
+    #' 
+
     y <- scale(dat[x], center = TRUE, scale = TRUE) 
     return(data.frame('scale' = attr(y , 'scaled:scale') , 'center' = attr(y , 'scaled:center') ))
 }
-#function that unsclaes the values using the orginal mean
+
 unscale <- function (x, d) {
+    #' #function that unsclaes the values using the orginal mean
+    #' 
+    #' function that uses the scale atrributes stored by getscaleval in the dataframe "scale_info" to unscale the metabolites values after the imputation is done
+    #' 
+    #' @param x the metabolite column name
+    #' @param d the main dataframe of x
+    #' 
+    #' @details a simple functions that unscales the values of a dataframe using the orginal attributes from the scale command.
+    #' This function must be run AFTER getscaleval. getscaleval creates the dataframe scale_info that is needed here.
+    #' 
+
     #d = dataframe, x = variable name 
     
     d[x] * scale_info[x,'scale'] + scale_info[x,'center']
 }
-#function for knn imputatiion, requires the metabolite with missing valuesm the main data, the correlation matrix, the names of metabolites with no missing values
-#the 10 strongest metabolites are selected and used to make a subdata with X
-#the knn function from VIM is used to impute
+
+
 useknn2 <- function(X , dataframe , data_cor, ccm  ) {
+    #' knn imputation function
+    #' 
+    #' function that runs the knn imputation from the VIM package
+    #' 
+    #' @param X name of the metabolite column with missing values
+    #' @param dataframe the dataframe with the missing and complete metabolites
+    #' @param data_cor the data correlation matrix for the metabolites
+    #' @param ccm vector with the column names of the complete cases
+    #' @details requires the metabolite with missing valuesm the main data, the correlation matrix, the names of metabolites with no missing values
+    #' the 10 strongest metabolites are selected and used to make a subdata with X
+    #' 
+    
     require(VIM)
     Preds = get_aux_mets(data_cor , X ,ccm  )
     mean_qual = mean(Preds , na.rm = T)
@@ -44,11 +83,35 @@ useknn2 <- function(X , dataframe , data_cor, ccm  ) {
                                k=10))[X]
     return(output[X])
     }
-#function that runs the mice imputation, requires X, the main data, the correlation matrix, the metabolites with no missing values
-#long to adjust the number of variables in the output of this function (TRUE only if the loop iteration is n>1)
-#optional argumnets are the O for the outcome, co_vars for the covariants that will be needed for the analysis model(s),
-#m is the number of imputations to be done, use_co_vars is true only if you want to use these variables as predcitors for the imputation
+
 usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_co_vars = FALSE ,logScale = TRUE ) {
+    #' mice imputatuion function.
+    #'
+    #' function that runs the mice imputation from the MICE package.
+    #' 
+    #' @param X name of the metabolite column with missing values
+    #' @param dataframe the dataframe with the missing and complete metabolites
+    #' @param data_cor the data correlation matrix for the metabolites
+    #' @param o the name if the outcome variable
+    #' @param co_vars name of the covariables column names
+    #' @param ccm vector with the column names of the complete cases
+    #' @param long logical argument to specify the output format
+    #' @param m number if imputations
+    #' @param use_co_vars logical argument to use the covariables for the imputation
+    #' @param logScale logcial. inherits the logScale option from UnMetImp
+    #' 
+    #' 
+    #' @details function that runs the mice imputation, requires X, the main data, the correlation matrix, the metabolites with no missing values
+    #' long to adjust the number of variables in the output of this function (TRUE only if the loop iteration is n>1)
+    #' 
+    #' optional argumnets are the O for the outcome, co_vars for the covariants that will be needed for the analysis model(s),
+    #' m is the number of imputations to be done, use_co_vars is true only if you want to use these variables as predcitors for the imputation
+    #' 
+    #' Long is set to FALSE if this the first variable in the loop, in this case only we select the .imp (imputation number), .id (the original row number), the outcome, the covars (only if use_co_vars is TRUE), X1.
+    #' 
+    #' For the remaining iterations in the loop we do not need these columns again so we only extract Xn
+    
+
     #step 1 creating a subset for X and the predictor variables to be used to calculate the imputation values
     Preds = get_aux_mets(data_cor , X ,ccm  )
     mean_qual = mean(Preds , na.rm = T)
@@ -93,10 +156,50 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
 #use_covars: set to TRUE if the co variables should be used for the imputation (not required for mice, IMPORTANT: will NOT work if the co vars have any missing values)
 #fileoutname: name of the output name for the knn or mice imputation as an csv sheet
 #logScale:
+
+
 UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 = NULL , outcome=NULL,
                  covars=NULL, fileoutname = NULL , use_covars = FALSE , logScale = TRUE) {
     require(mice)
     require(dplyr)
+    
+    #' UnMetImp: main function to impute the metabolites
+    #'
+    #' Function that imputes the data with MICE-pmm or knn-obs-sel.
+    #' Both methods use a correlation matrix of the metabolites and selects the best correlated completed cases to imputes the values.
+    #'
+    #' @param x The value to be squared
+    #' @param DataFrame: The full dataframe to be used with all the metabolites, covariables and the outcome. Must numeric. Must be a dataframe.
+    #' @param imp_type: String. Type of imputation to be used: <code>mice</code> or <code>knn</code>. Default is mice.
+    #' @param number_m: Numeric. For __imp_type == "mice"__ only. Number of imputations to be used. Default = 5.    
+    #' @param group1: Vector. Required. Vector with the names of metabolite columns. Will be imputed using the provided __imp_type__.
+    #' @param group2: Vector. Optional. Vector with the names of metabolite columns. Will be imputed to zero.
+    #' @param outcome: String. Required. The outcome variable to be used in the future analysis.
+    #' @param covars: Vector. Recommended. variables used in the future analysis. Will be returned with the imputed data.
+    #' @param fileoutname: String value. Optional. Saves the imputed output to a file.
+    #' @param use_covars: Logical. Optional. Whether the __covars__ will be used to impute the missing values in the metabolites. Default = FALSE.
+    #' @param logScale: Logical. Optional. Whether the values need to be log and scaled for the imputation. if TRUE, the values will be log and scaled then un-log and unscaled before returning the imputed output. If FALSE, script will assume you have log the values. Default = TRUE.
+    #' 
+    #' @details The user provides two lists of metabolites: *group1* to be imputed using MICE-pmm or kNN-obs-sel; *group2* to be impute with zero.
+    #' 
+    #' The user must also provide the variables t be used in the analysis after the imputation including the outcome.
+    #' 
+    #' A correlation matrix is created for all the *group1* metabolites.
+    #' 
+    #' The *group1* metabolites are split to complete cases metabolites(ccm) and incomplete cases metabolites(icm).
+    #' 
+    #' For each icm 10 ccm with the highest absolute R correlation are selected. These will be used to impute the missing values in icm.
+    #' if the icm has more than 90% missing values OR if the number of non-missing values in less than the number of predictor variables + 20. 
+    #' This is done to because of two reasons:
+    #' 1- to eliminate possibly mis-annotated metabolites or unannotated metabolites that are xenobiotic in nature, 
+    #' 2- To ensure the availability of enough cases to perform the imputation. 
+    #' 
+    #' This issue prevents the MICE package from performing the imputation all together.
+    #' 
+    #' The invalid cases will be imputed to zero.
+    #' 
+    #' The imputed results are returned with 3 objects; The imputed data, the summary of the imputation, the mean R of the ccm used for each icm.
+
     #ptm <- proc.time()
     if (logScale) {
     #Step 1 log: normal dist, outliers effect reduced
@@ -229,3 +332,4 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
         }
 
 }
+
