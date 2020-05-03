@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3783680.svg)](https://doi.org/10.5281/zenodo.3783680)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3778919.svg)](https://doi.org/10.5281/zenodo.3778919)
 
 Please cite as: Tariq Faquih. tofaquih/imputation_of_untargeted_metabolites v1.1. May 2020. doi:10.5281/zenodo.3778919.
 
