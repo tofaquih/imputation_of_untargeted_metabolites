@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/235815834.svg)](https://zenodo.org/badge/latestdoi/235815834)
+Tariq Faquih. tofaquih/imputation_of_untargeted_metabolites v1.0. April 2020. doi:10.5281/zenodo.3778920.
 
 # Introduction
 A script designed to impute missing values in Metabolon metabolomics datasets. Two imputation methods can be used: MICE and KNN
