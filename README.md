@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3778919.svg)](https://doi.org/10.5281/zenodo.3778919)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3778919.svg)](https://doi.org/10.5281/zenodo.3778919) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tofaquih/imputation_of_untargeted_metabolites/HEAD?filepath=Example.ipynb)
 
 Please cite as: Tariq Faquih. tofaquih/imputation_of_untargeted_metabolites v1.1. May 2020. doi:10.5281/zenodo.3778919.
 
@@ -47,6 +47,8 @@ This script is designed to impute missing values in Metabolon HD4 datasets using
     - **use_covars**: Logical. Optional. Whether the __covars__ will be used to impute the missing values in the metabolites. Default = FALSE.
     - **logScale**: Logical. Optional. Whether the values need to be log and scaled for the imputation. if TRUE, the values will be log and scaled then un-log and unscaled before returning the imputed output. If FALSE, script will assume you have log the values. Default = TRUE.
 # Examples of running the scripts:
+Please try out the script using the provided NEO metabolomics data (with simulated charaterists variables) in the Binder docker [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tofaquih/imputation_of_untargeted_metabolites/HEAD?filepath=Example.ipynb)
+
 > - mydata: your data table in dataframe class format.
 > - endoids: a user created vector containing the column names of the endogenous metabolites 
 > - unknowns: a user created vector containing the column names of the unannotated metabolites 
@@ -66,9 +68,10 @@ This script is designed to impute missing values in Metabolon HD4 datasets using
 > The mice package stores the output from the imputation step into the object class mids by default. This stores information about the imputation process used and the imputation datasets created. The with() and pool() need the object class mids as input to run the analysis on the datasets, calculate the estimate for each dataset then pools the estimates and standard errors using Rubin’s Rules.
 To convert the object class mids to a “long” format: 
 
-<code>require(‘mice’)
-IMP <- miceimp$mids
-       
+<code>require(‘mice’) 
+  
+IMP <- miceimp$mids  
+
 Longformat =<-complete(IMP ,  action = 'long' , include = TRUE)</code>
   
 To convert the Longformat back to mids class:
