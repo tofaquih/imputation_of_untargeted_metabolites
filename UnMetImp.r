@@ -251,6 +251,7 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
         #can also be saved to a csv file if fileoutname is provided
         output = do.call(cbind, lapply(icm_names, FUN = useknn2, dataframe = DataFrame , data_cor = data_cor, ccm = ccm))
         if (logScale) {
+            DataFrame[ccm] <-  exp(as.data.frame(do.call(cbind , lapply(ccm ,FUN =  unscale, d = DataFrame[ccm]))) )
             output <- exp(as.data.frame(do.call(cbind,lapply(colnames(output),FUN =  unscale, d = output)))) }
         #the imputed variables replace their orginals in the main dataframe 
         DataFrame[colnames(output)] <- output
