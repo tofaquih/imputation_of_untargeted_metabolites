@@ -1,6 +1,9 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4167193.svg)](https://doi.org/10.5281/zenodo.4167193) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tofaquih/imputation_of_untargeted_metabolites/HEAD?filepath=Example.ipynb)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3778919.svg)](https://doi.org/10.5281/zenodo.3778919) [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tofaquih/imputation_of_untargeted_metabolites/HEAD?filepath=Example.ipynb)
 
-Please cite as: Tariq Faquih. (2020, October 31). tofaquih/imputation_of_untargeted_metabolites: Offical Release (Version v1.3). Zenodo. http://doi.org/10.5281/zenodo.4167193
+Please cite as:
+> Tariq Faquih. (2022). tofaquih/imputation_of_untargeted_metabolites: Official Release v1.4 (v1.4). Zenodo. https://doi.org/10.5281/zenodo.6347808
+
+> Faquih T, van Smeden M, Luo J, le Cessie S, Kastenmüller G, Krumsiek J, Noordam R, van Heemst D, Rosendaal FR, van Hylckama Vlieg A, Willems van Dijk K, Mook-Kanamori DO. A Workflow for Missing Values Imputation of Untargeted Metabolomics Data. Metabolites. 2020 Nov 26;10(12):486. doi: 10.3390/metabo10120486. PMID: 33256233; PMCID: PMC7761057.
 
 
 # Introduction
