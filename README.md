@@ -34,8 +34,10 @@ This script is designed to impute missing values in Metabolon HD4 datasets using
                     covars=NULL, 
                     fileoutname = NULL , 
                     use_covars = FALSE , 
-                    logScale = TRUE )</code>
-  - **Arguments**
+                    logScale = TRUE , 
+                    covars_only_mode = FALSE ,
+                    maxN_input = 10)</code>
+  - **Arguments** 
     - **DataFrame**: The full dataframe to be used with all the metabolites, covariables and the outcome. Must numeric. Must be a dataframe.
     - **imp_type**: String. Type of imputation to be used: <code>mice</code> or <code>knn</code>. Default is mice.
     - **number_m**: Numeric. For __imp_type == "mice"__ only. Number of imputations to be used. Default = 5.    
@@ -46,6 +48,9 @@ This script is designed to impute missing values in Metabolon HD4 datasets using
     - **fileoutname**: String value. Optional. Saves the imputed output to a file.
     - **use_covars**: Logical. Optional. Whether the __covars__ will be used to impute the missing values in the metabolites. Default = FALSE.
     - **logScale**: Logical. Optional. Whether the values need to be log and scaled for the imputation. if TRUE, the values will be log and scaled then un-log and unscaled before returning the imputed output. If FALSE, script will assume you have log the values. Default = TRUE.
+    - **covars_only_mode**: an option to only use the covariables for the imputation, ignoring all other metabolites. Useful in case of collinear/constant variables. only works with mice imputation
+    - **maxN_input**: sets the max number of ccm metabolites to be used for the imputation. Default is 10. Is overridden if covars_only_mode == TRUE. Useful in case of collinear/constant variables.
+    
 # Examples of running the scripts:
 Please try out the script using the provided NEO metabolomics data (with simulated charaterists variables) in the Binder docker [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/tofaquih/imputation_of_untargeted_metabolites/HEAD?filepath=Example.ipynb)
 

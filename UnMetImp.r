@@ -1,14 +1,14 @@
 ##################################################
 ## Project: A workflow for missing values imputation of untargeted metabolomics data 
 ## Script purpose: Imputes missing values in metabolite data using MICE-pmm or kNN-obs-sel
-## Date: 20200430
+## Date: 20220311
 ## Author:Tariq faquih
 ##################################################
 
 library(docstring)
 
 
-get_aux_mets <- function(data_cor ,  Met , ccm) {
+get_aux_mets <- function(data_cor ,  Met , ccm, maxN = 10) {
     #' Function that selects the 10 strongest correlated metabolites
     #' 
     #' @param data_cor the data correlation matrix for the metabolites
@@ -17,7 +17,7 @@ get_aux_mets <- function(data_cor ,  Met , ccm) {
     #' 
     cor_x = data_cor[which(colnames(data_cor) == Met) ,]
     cor_x <- abs(cor_x[names(cor_x) %in% ( ccm )])
-    Preds = c(na.omit(sort(cor_x , decreasing = T)[1:10]))
+    Preds = c(na.omit(sort(cor_x , decreasing = T)[1:maxN]))
     return(Preds)
 }
 
@@ -56,7 +56,7 @@ unscale <- function (x, d) {
 }
 
 
-useknn2 <- function(X , dataframe , data_cor, ccm  ) {
+useknn2 <- function(X , dataframe , data_cor, ccm , maxN_input ) {
     #' knn imputation function
     #' 
     #' function that runs the knn imputation from the VIM package
@@ -70,7 +70,7 @@ useknn2 <- function(X , dataframe , data_cor, ccm  ) {
     #' 
     
     require(VIM)
-    Preds = get_aux_mets(data_cor , X ,ccm  )
+    Preds = get_aux_mets(data_cor , X ,ccm , maxN , maxN_input )
     mean_qual = mean(Preds , na.rm = T)
     QualSummary <<- rbind(QualSummary , data.frame('Metabolite' = X , 'Mean_Quality' = mean_qual))
     cluster = c(names(Preds) , X )
@@ -84,7 +84,7 @@ useknn2 <- function(X , dataframe , data_cor, ccm  ) {
     return(output[X])
     }
 
-usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_co_vars = FALSE ,logScale = TRUE ) {
+usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_co_vars = FALSE ,logScale = TRUE , maxN_input) {
     #' mice imputatuion function.
     #'
     #' function that runs the mice imputation from the MICE package.
@@ -113,7 +113,7 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
     
 
     #step 1 creating a subset for X and the predictor variables to be used to calculate the imputation values
-    Preds = get_aux_mets(data_cor , X ,ccm  )
+    Preds = get_aux_mets(data_cor , X ,ccm , maxN = maxN_input )
     mean_qual = mean(Preds , na.rm = T)
     if (use_co_vars == TRUE){
         cluster = c(O, co_vars , names(Preds) , X )}
@@ -128,9 +128,11 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
     where_matrix <- make.where(minidf)
     Dont_Impute <- cluster[!cluster %in% c(X)]
     where_matrix[, Dont_Impute] = FALSE
-    
+    #We also create a prediction matrix. Note: if the metabolite is collinear or constant it will be dropped and will not be imputed
+    #please check micelog from the output or mids$loggedEvents. see mice.mids @ https://cran.r-project.org/web/packages/mice/mice.pdf
+    Pred_matrix <- make.predictorMatrix(minidf)
     #The actual imputation step using the mice package
-    IMP <- mice(minidf ,printFlag = FALSE , m= m , where = where_matrix )
+    IMP <- mice(minidf ,printFlag = FALSE , m= m , where = where_matrix , predictorMatrix =  Pred_matrix)
 
     #Long is set to FALSE if this the first variable in the loop, in this case only we select the .imp (imputation number), .id (the original row number), the outcome, the covars (only if use_co_vars is TRUE), X1.
     #For the remaining iterations in the loop we do not need these columns again so we only extract Xn
@@ -159,7 +161,7 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
 
 
 UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , group2 = NULL , outcome=NULL,
-                 covars=NULL, fileoutname = NULL , use_covars = FALSE , logScale = TRUE) {
+                 covars=NULL, fileoutname = NULL , use_covars = FALSE , logScale = TRUE , covars_only_mode = FALSE , maxN_input = 10) {
     require(mice)
     require(dplyr)
     
@@ -179,6 +181,8 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
     #' @param fileoutname: String value. Optional. Saves the imputed output to a file.
     #' @param use_covars: Logical. Optional. Whether the __covars__ will be used to impute the missing values in the metabolites. Default = FALSE.
     #' @param logScale: Logical. Optional. Whether the values need to be log and scaled for the imputation. if TRUE, the values will be log and scaled then un-log and unscaled before returning the imputed output. If FALSE, script will assume you have log the values. Default = TRUE.
+    #' @param covars_only_mode: an option to only use the covariables for the imputation, ignoring all other metabolites. Useful in case of collinear/constant variables. only works with mice imputation
+    #' @param maxN_input: sets the max number of ccm metabolites to be used for the imputation. Default is 10. Is overridden if covars_only_mode == TRUE. Useful in case of collinear/constant variables.
     #' 
     #' @details The user provides two lists of metabolites: *group1* to be imputed using MICE-pmm or kNN-obs-sel; *group2* to be impute with zero.
     #' 
@@ -188,7 +192,7 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
     #' 
     #' The *group1* metabolites are split to complete cases metabolites(ccm) and incomplete cases metabolites(icm).
     #' 
-    #' For each icm 10 ccm with the highest absolute R correlation are selected. These will be used to impute the missing values in icm.
+    #' For each icm, *maxN_input* number of ccm with the highest absolute R correlation are selected. These will be used to impute the missing values in icm.
     #' if the icm has more than 90% missing values OR if the number of non-missing values in less than the number of predictor variables + 20. 
     #' This is done to because of two reasons:
     #' 1- to eliminate possibly mis-annotated metabolites or unannotated metabolites that are xenobiotic in nature, 
@@ -243,13 +247,14 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
     	DataFrame[c(ccm , icm_names)] <- scale(log( DataFrame[c(ccm , icm_names)] )) }
 
     #Summary of the imputation used for which variables 
-    msummary <- list('Imputed' = icm_names, 'Bad Case' = invalids, 'Zero' = group2_summary )
+    msummary <- list('Imputed' = icm_names, 'Bad Case' = invalids, 'Zero' = group2_summary , 
+                     'collinear' = mice:::find.collinear(DataFrame[c(group1,  group2 , covars)]) )
     
     #knn imputation option
     if (imp_type == 'knn') {
         #This calls the useknn2 function above. output is un-scaled and exponentialized and returned as object. 
         #can also be saved to a csv file if fileoutname is provided
-        output = do.call(cbind, lapply(icm_names, FUN = useknn2, dataframe = DataFrame , data_cor = data_cor, ccm = ccm))
+        output = do.call(cbind, lapply(icm_names, FUN = useknn2, dataframe = DataFrame , data_cor = data_cor, ccm = ccm , maxN_input = maxN_input))
         if (logScale) {
             DataFrame[ccm] <-  exp(as.data.frame(do.call(cbind , lapply(ccm ,FUN =  unscale, d = DataFrame[ccm]))) )
             output <- exp(as.data.frame(do.call(cbind,lapply(colnames(output),FUN =  unscale, d = output)))) }
@@ -265,6 +270,13 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
     
     #mice imputation section
     else if ( imp_type == 'mice' ){
+        if (covars_only_mode) {
+            logScale <- FALSE
+            ccm <- NULL
+            use_covars <- TRUE
+            if (is.null(covars) ) {return('Please include covariables')}
+        }
+                
         #Only the first variable with missing values is imputed here (see usemice2 fucntion for details)
         firstmids <- usemice2(X = icm_names[1] , dataframe = DataFrame ,
                               data_cor = data_cor,
@@ -274,7 +286,8 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
                               long = FALSE ,
                               use_co_vars = use_covars,
                               m= number_m,
-                              logScale = logScale
+                              logScale = logScale,
+                              maxN_input = maxN_input
                              )
 
         #if , for whatever reason, there is only one metabolite with missingness, the next step will not be run
@@ -289,7 +302,8 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
                                             long = TRUE ,
                                             use_co_vars = use_covars,
                                             m=number_m,
-                                            logScale = logScale)))
+                                            logScale = logScale,
+                                            maxN_input = maxN_input)))
             if (logScale) {
             allmids <- cbind(firstmids , exp(as.data.frame(do.call(cbind,lapply(colnames(allmids),
                                                                                 FUN =  unscale, d = allmids)))) )
@@ -329,7 +343,7 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
         #convert allmids to a "mids" object, the object format required by the mice package to run the analysis
         allmids <- as.mids(allmids)
 
-        return(list(mids = allmids , Msummary = msummary , QS = QualSummary))
+        return(list(mids = allmids , Msummary = msummary , QS = QualSummary , micelog = allmids$loggedEvents))
         }
 
 }
