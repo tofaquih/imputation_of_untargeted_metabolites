@@ -314,17 +314,7 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
                                   maxN_input = maxN_input)
             allmids <- as.data.frame(do.call(cbind , lapply(allmice, '[[', "imputedcol")))
             micelog <- do.call(rbind , lapply(allmice, '[[', "micelog"))
-            # allmids <- as.data.frame(do.call(cbind , lapply(icm_names[2:length(icm_names)] , FUN = usemice2 ,
-            #                                 dataframe = DataFrame ,
-            #                                 data_cor = data_cor,
-            #                                 ccm = ccm ,
-            #                                 O=outcome,
-            #                                 co_vars = covars,
-            #                                 long = TRUE ,
-            #                                 use_co_vars = use_covars,
-            #                                 m=number_m,
-            #                                 logScale = logScale,
-            #                                 maxN_input = maxN_input)))
+
             if (logScale) {
             allmids <- cbind(firstmids , exp(as.data.frame(do.call(cbind,lapply(colnames(allmids),
                                                                                 FUN =  unscale, d = allmids)))) )
