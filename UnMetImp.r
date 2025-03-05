@@ -354,8 +354,9 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
         
         #convert allmids to a "mids" object, the object format required by the mice package to run the analysis
         allmids <- as.mids(allmids)
+        allmids$loggedEvents <- micelog
 
-        return(list(mids = allmids , Msummary = msummary , QS = QualSummary , micelog = micelog))
+        return(list(mids = allmids , Msummary = msummary , QS = QualSummary))
         }
 
 }
