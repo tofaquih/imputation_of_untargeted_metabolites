@@ -322,7 +322,10 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
             micelog <- rbind(firstmicelog , micelog)
         }    
         #only used if there is one variable with missing values
-        else{allmids <- firstmids}
+        else{
+          allmids <- firstmids
+          micelog <- firstmicelog
+        }
 
         #output is un-scaled and exponentialized and returned as object
         if (logScale) {
