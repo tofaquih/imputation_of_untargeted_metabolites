@@ -137,13 +137,19 @@ usemice2 <- function(X , dataframe , data_cor, O, co_vars, ccm, long , m , use_c
     #Long is set to FALSE if this the first variable in the loop, in this case only we select the .imp (imputation number), .id (the original row number), the outcome, the covars (only if use_co_vars is TRUE), X1.
     #For the remaining iterations in the loop we do not need these columns again so we only extract Xn
 
-    if (long) {output <- complete(IMP ,  action = 'long' , include = TRUE)[X]}
+    if (long) {imputedcol <- complete(IMP ,  action = 'long' , include = TRUE)[X]}
     
-    else {output <- complete(IMP ,  action = 'long' , include = TRUE)[c('.imp','.id', O , co_vars , X )]
+    else {imputedcol <- complete(IMP ,  action = 'long' , include = TRUE)[c('.imp','.id', O , co_vars , X )]
          if (logScale) { 
-             output[X] <- exp(as.data.frame(do.call(cbind , lapply(X , FUN =  unscale, d = output)))) }
+           imputedcol[X] <- exp(as.data.frame(do.call(cbind , lapply(X , FUN =  unscale, d = imputedcol)))) }
 
-         }
+    }
+    if(is.null(IMP$loggedEvents)) {
+      micelog <- data.frame()
+    } else {
+      micelog <- data.frame(colname = X, IMP$loggedEvents)
+    }
+    output <- list(imputedcol = imputedcol , micelog = micelog)
     return(output)
 }
 
@@ -278,7 +284,7 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
         }
                 
         #Only the first variable with missing values is imputed here (see usemice2 fucntion for details)
-        firstmids <- usemice2(X = icm_names[1] , dataframe = DataFrame ,
+        firstmice <- usemice2(X = icm_names[1] , dataframe = DataFrame ,
                               data_cor = data_cor,
                               ccm = ccm ,
                               O= outcome,
@@ -289,28 +295,37 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
                               logScale = logScale,
                               maxN_input = maxN_input
                              )
+        firstmids <- firstmice$imputedcol
+        firstmicelog <- firstmice$micelog
 
         #if , for whatever reason, there is only one metabolite with missingness, the next step will not be run
         #Otherwise the remaining variables will be imputed then merged with the togther and with the first variable
         if (length(icm_names) > 1) {
-            allmids <- as.data.frame(do.call(cbind , lapply(icm_names[2:length(icm_names)] , FUN = usemice2 ,
-                                            dataframe = DataFrame ,
-                                            data_cor = data_cor,
-                                            ccm = ccm ,
-                                            O=outcome,
-                                            co_vars = covars,
-                                            long = TRUE ,
-                                            use_co_vars = use_covars,
-                                            m=number_m,
-                                            logScale = logScale,
-                                            maxN_input = maxN_input)))
+            allmice <- lapply(icm_names[2:length(icm_names)] , FUN = usemice2 ,
+                                  dataframe = DataFrame ,
+                                  data_cor = data_cor,
+                                  ccm = ccm ,
+                                  O=outcome,
+                                  co_vars = covars,
+                                  long = TRUE ,
+                                  use_co_vars = use_covars,
+                                  m=number_m,
+                                  logScale = logScale,
+                                  maxN_input = maxN_input)
+            allmids <- as.data.frame(do.call(cbind , lapply(allmice, '[[', "imputedcol")))
+            micelog <- do.call(rbind , lapply(allmice, '[[', "micelog"))
+
             if (logScale) {
             allmids <- cbind(firstmids , exp(as.data.frame(do.call(cbind,lapply(colnames(allmids),
                                                                                 FUN =  unscale, d = allmids)))) )
-                } else {allmids <- cbind(firstmids , allmids) }
+            } else {allmids <- cbind(firstmids , allmids) }
+            micelog <- rbind(firstmicelog , micelog)
         }    
         #only used if there is one variable with missing values
-        else{allmids <- firstmids}
+        else{
+          allmids <- firstmids
+          micelog <- firstmicelog
+        }
 
         #output is un-scaled and exponentialized and returned as object
         if (logScale) {
@@ -342,8 +357,9 @@ UnMetImp <- function(DataFrame , imp_type = 'mice' , number_m = 5 , group1 , gro
         
         #convert allmids to a "mids" object, the object format required by the mice package to run the analysis
         allmids <- as.mids(allmids)
+        allmids$loggedEvents <- micelog
 
-        return(list(mids = allmids , Msummary = msummary , QS = QualSummary , micelog = allmids$loggedEvents))
+        return(list(mids = allmids , Msummary = msummary , QS = QualSummary))
         }
 
 }
